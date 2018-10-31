@@ -15,10 +15,23 @@ type RsaIdentity struct {
 	private *rsa.PrivateKey
 }
 
-// SignMessage creates a signature of the message. In addition, it returns a hash.
+func NewRsaIdentity() (*RsaIdentity, error) {
+	identity := new(RsaIdentity)
+
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+
+	if err != nil {
+		return identity, err
+	}
+
+	identity.private = priv
+	identity.public = &priv.PublicKey
+	return identity, nil
+}
+// Sign creates a signature of the message. In addition, it returns a hash.
 // The combination of the two can be used to check whether or not the message is created using
 // a particular private key (see r.VerifySignature)
-func (r *RsaIdentity) SignMessage(message []byte) ([]byte, []byte, error) {
+func (r *RsaIdentity) Sign(message []byte) ([]byte, []byte, error) {
 	var opts rsa.PSSOptions // Probabilistic Signature Scheme
 	opts.SaltLength = rsa.PSSSaltLengthAuto
 	pssHash := crypto.SHA256.New()
@@ -30,15 +43,16 @@ func (r *RsaIdentity) SignMessage(message []byte) ([]byte, []byte, error) {
 	return signed, hashed, err
 }
 
-
-func (r *RsaIdentity) VerifySignature(signature []byte, hashedMessage []byte, publicKey *rsa.PublicKey) error {
+// VerifySignature checks if the signature is related to the RSA key's from the sender
+func (r *RsaIdentity) VerifySignature(sig []byte, hash []byte, pk *rsa.PublicKey) error {
 	var opts rsa.PSSOptions // Probabilistic Signature Scheme
 	opts.SaltLength = rsa.PSSSaltLengthAuto
-	return rsa.VerifyPSS(publicKey, crypto.SHA256, hashedMessage, signature, &opts)
+	return rsa.VerifyPSS(pk, crypto.SHA256, hash, sig, &opts)
 }
 
 // Encrypt's the message using EncryptOAEP which encrypts the given message with RSA-OAEP.
 // https://en.wikipedia.org/wiki/Optimal_asymmetric_encryption_padding
+// Returns the encrypted message and an error.
 func (r *RsaIdentity) Encrypt(message []byte, receiverKey *rsa.PublicKey) ([]byte, error) {
 	label := []byte("")
 	hash := sha256.New()
@@ -52,34 +66,20 @@ func (r *RsaIdentity) Decrypt(message []byte) ([]byte, error) {
 	return rsa.DecryptOAEP(hash, rand.Reader, r.private, message, label)
 }
 
-func NewIdentity() (*RsaIdentity, error) {
-	identity := new(RsaIdentity)
-
-	priv, err := rsa.GenerateKey(rand.Reader, 2048)
-
-	if err != nil {
-		return identity, err
-	}
-
-	identity.private = priv
-	identity.public = &priv.PublicKey
-	return identity, nil
-}
-
 func main() {
 
 	// we need two persons talking to each other
-	henk, err := NewIdentity()
+	henk, err := NewRsaIdentity()
 
 	if err != nil {
-		fmt.Println(err.Error)
+		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	gerda, err := NewIdentity()
+	ingrid, err := NewRsaIdentity()
 
 	if err != nil {
-		fmt.Println(err.Error)
+		fmt.Println(err)
 		os.Exit(1)
 	}
 
@@ -87,18 +87,17 @@ func main() {
 	// note that the message is a byte array, not just a string.
 	message := []byte("My vote is on that blond haired Wilder's guy")
 
-	// Lets encrypt it, we want to sent it to Gerda, thus, we need her public key.
-	receiverKey := gerda.public
-	encryptedMessage, err := henk.Encrypt(message, receiverKey)
+	// Lets encrypt it, we want to sent it to Ingrid, thus, we need her public key.
+	encryptedMessage, err := henk.Encrypt(message, ingrid.public)
 
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	// Henk signs the message with his private key. This will show the recipient
+	// Henk signs the message with his private key. This will show the Ingrid
 	// proof that this message is indeed from Henk
-	signature, hashedMessage,  err := henk.SignMessage(message)
+	signature, hashedMessage,  err := henk.Sign(message)
 
 	if err != nil {
 		fmt.Println(err)
@@ -106,7 +105,7 @@ func main() {
 	}
 
 	// Decrypt Message
-	plainTextMessage, err := gerda.Decrypt(encryptedMessage)
+	plainTextMessage, err := ingrid.Decrypt(encryptedMessage)
 
 	if err != nil {
 		fmt.Println(err)
@@ -116,7 +115,7 @@ func main() {
 	fmt.Printf("OAEP decrypted [%x] to \n[%s]\n", encryptedMessage, plainTextMessage)
 
 	// Verify Signature
-	err = gerda.VerifySignature(signature, hashedMessage, henk.public)
+	err = ingrid.VerifySignature(signature, hashedMessage, henk.public)
 
 	if err != nil {
 		fmt.Println("Who are U? Verify Signature failed")
