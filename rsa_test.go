@@ -78,3 +78,41 @@ func TestEncryptDecrypt(t *testing.T) {
 		t.Error("Unable to decrypt Henk's message for Ingrid; byte arrays are not the same")
 	}
 }
+
+func TestEncryptDecryptMyself(t *testing.T) {
+	// If anyone, even you, encrypts (i.e. “locks”) something with your public-key,
+	// only you can decrypt it (i.e. “unlock” it) with your secret, private key.
+	henk, err := NewRsaIdentity()
+
+	if err != nil {
+		t.Errorf("Unable to create identity for Henk; %s", err)
+	}
+
+	// a message from Henk
+	msg := []byte("Subsidie, dat is toch iets dat je krijgt als je eigenlijk niet goed genoeg bent?")
+	// Lets encrypt it, we want to sent it to Ingrid, thus, we need her public key.
+	encryptedMessage, err := henk.Encrypt(msg, henk.public)
+
+	if err != nil {
+		t.Errorf("Unable to encrypt Henk's personal message; %s", err)
+	}
+
+	// Decrypt Message
+	plainTextMessage, err := henk.Decrypt(encryptedMessage)
+
+	if err != nil {
+		t.Errorf("Unable to decrypt Henk's personal message; %s", err)
+	}
+
+	if !bytes.Equal(plainTextMessage[:], msg[:]) {
+		t.Error("Unable to decrypt Henk's personal message; byte arrays are not the same")
+	}
+}
+
+func TestMyMessage(t *testing.T) {
+	// If you encrypt (i.e. “lock”) something with your private key, anyone can decrypt it (i.e. “unlock” it),
+	// but this serves as a proof that you encrypted it: it’s “digitally signed” by you.
+
+	// todo
+}
+

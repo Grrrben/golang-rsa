@@ -52,10 +52,20 @@ func (r *RsaIdentity) VerifySignature(sig []byte, hash []byte, pk *rsa.PublicKey
 // Encrypt's the message using EncryptOAEP which encrypts the given message with RSA-OAEP.
 // https://en.wikipedia.org/wiki/Optimal_asymmetric_encryption_padding
 // Returns the encrypted message and an error.
-func (r *RsaIdentity) Encrypt(message []byte, receiverKey *rsa.PublicKey) ([]byte, error) {
+func (r *RsaIdentity) Encrypt(message []byte, key *rsa.PublicKey) ([]byte, error) {
 	label := []byte("")
 	hash := sha256.New()
-	return rsa.EncryptOAEP(hash, rand.Reader, receiverKey, message, label)
+	return rsa.EncryptOAEP(hash, rand.Reader, key, message, label)
+}
+
+// Encrypt's the message using EncryptOAEP which encrypts the given message with RSA-OAEP.
+// https://en.wikipedia.org/wiki/Optimal_asymmetric_encryption_padding
+// Returns the encrypted message and an error.
+func (r *RsaIdentity) EncryptForPublic(message []byte, pk *rsa.PrivateKey) ([]byte, error) {
+	label := []byte("")
+	hash := sha256.New()
+	rsa.SignPKCS1v15(nil, pk, crypto.Hash(0), message)
+	return rsa.En(hash, rand.Reader, pk, message, label)
 }
 
 // Decrypt a message using your private key.
