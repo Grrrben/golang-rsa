@@ -26,7 +26,7 @@ func TestSignature(t *testing.T) {
 		t.Errorf("Unable to create identity for Henk; %s", err)
 	}
 
-	// A message from Henk to Gerda,
+	// A message from Henk to Ingrid,
 	// note that the message is a byte array, not just a string.
 	msg := []byte("Is dit kunst of kan het weg?")
 	// Henk signs the message with his private key. This will show the recipient

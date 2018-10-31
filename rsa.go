@@ -5,8 +5,6 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
-	"fmt"
-	"os"
 )
 
 // RsaIdentity is just a small struct that clearly differentiates between the private and public key of an RSA keypair
@@ -15,6 +13,7 @@ type RsaIdentity struct {
 	private *rsa.PrivateKey
 }
 
+// NewRsaIdentity returns a new identity with random keys
 func NewRsaIdentity() (*RsaIdentity, error) {
 	identity := new(RsaIdentity)
 
@@ -59,69 +58,10 @@ func (r *RsaIdentity) Encrypt(message []byte, receiverKey *rsa.PublicKey) ([]byt
 	return rsa.EncryptOAEP(hash, rand.Reader, receiverKey, message, label)
 }
 
-// Decrypt a message using your private key. A received message should be encrypted using the receivers public key.
+// Decrypt a message using your private key.
+// A received message should be encrypted using the receivers public key.
 func (r *RsaIdentity) Decrypt(message []byte) ([]byte, error) {
 	label := []byte("")
 	hash := sha256.New()
 	return rsa.DecryptOAEP(hash, rand.Reader, r.private, message, label)
-}
-
-func main() {
-
-	// we need two persons talking to each other
-	henk, err := NewRsaIdentity()
-
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	ingrid, err := NewRsaIdentity()
-
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	// A message from Henk to Gerda,
-	// note that the message is a byte array, not just a string.
-	message := []byte("My vote is on that blond haired Wilder's guy")
-
-	// Lets encrypt it, we want to sent it to Ingrid, thus, we need her public key.
-	encryptedMessage, err := henk.Encrypt(message, ingrid.public)
-
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	// Henk signs the message with his private key. This will show the Ingrid
-	// proof that this message is indeed from Henk
-	signature, hashedMessage,  err := henk.Sign(message)
-
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	// Decrypt Message
-	plainTextMessage, err := ingrid.Decrypt(encryptedMessage)
-
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	fmt.Printf("OAEP decrypted [%x] to \n[%s]\n", encryptedMessage, plainTextMessage)
-
-	// Verify Signature
-	err = ingrid.VerifySignature(signature, hashedMessage, henk.public)
-
-	if err != nil {
-		fmt.Println("Who are U? Verify Signature failed")
-		os.Exit(1)
-	} else {
-		fmt.Println("Verify Signature successful")
-	}
-
 }
