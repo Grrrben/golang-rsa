@@ -28,11 +28,12 @@ func NewRsaIdentity() (*RsaIdentity, error) {
 }
 
 // Sign returns a signature made by combining the message and the signers private key
-// With the r.Verify function, the
+// With the r.Verify function, the signature can be checked.
 func (r *RsaIdentity) Sign(msg []byte) ([]byte, error) {
 	return rsa.SignPKCS1v15(rand.Reader, r.private, crypto.SHA256, r.getHashSum(msg))
 }
 
+// Verify checks if a message is signed by a given Public Key
 func (r *RsaIdentity) Verify(msg []byte, sig []byte, pk *rsa.PublicKey) error {
 	h := sha256.New()
 	h.Write(msg)

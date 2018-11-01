@@ -7,13 +7,11 @@ import (
 
 func TestNewRsaIdentity(t *testing.T) {
 	henk, err := NewRsaIdentity()
-
 	if err != nil {
 		t.Errorf("Unable to create identity for Henk; %s", err)
 	}
 
 	pkSize := henk.public.Size()
-
 	if pkSize != 256 {
 		t.Errorf("Unexpected pubic key size for Henk; expected %d got %d", 256, pkSize)
 	}
@@ -59,10 +57,7 @@ func TestEncryptionNeverTheSame(t *testing.T) {
 
 	identities := []*RsaIdentity{henk, jaap, joop, koos, kees, erik}
 
-	ingrid, err := NewRsaIdentity()
-	if err != nil {
-		t.Errorf("Unable to create identity for Ingrid; %s", err)
-	}
+	ingrid, _ := NewRsaIdentity()
 
 	msg := []byte("Aan ons land geen polonaise.")
 	var msgs [][]byte
@@ -83,17 +78,8 @@ func TestEncryptionNeverTheSame(t *testing.T) {
 }
 
 func TestEncryptDecrypt(t *testing.T) {
-	henk, err := NewRsaIdentity()
-
-	if err != nil {
-		t.Errorf("Unable to create identity for Henk; %s", err)
-	}
-
-	ingrid, err := NewRsaIdentity()
-
-	if err != nil {
-		t.Errorf("Unable to create identity for Ingrid; %s", err)
-	}
+	henk, _ := NewRsaIdentity()
+	ingrid, _ := NewRsaIdentity()
 
 	// a message from Henk to Ingrid
 	msg := []byte("Die uitkeringstrekkers pikken al onze banen in.")
@@ -119,11 +105,7 @@ func TestEncryptDecrypt(t *testing.T) {
 func TestEncryptDecryptMyself(t *testing.T) {
 	// If anyone, even you, encrypts (id.e. “locks”) something with your public-key,
 	// only you can decrypt it (id.e. “unlock” it) with your secret, private key.
-	henk, err := NewRsaIdentity()
-
-	if err != nil {
-		t.Errorf("Unable to create identity for Henk; %s", err)
-	}
+	henk, _ := NewRsaIdentity()
 
 	// a message from Henk
 	msg := []byte("Subsidie, dat is toch iets dat je krijgt als je eigenlijk niet goed genoeg bent?")
@@ -147,11 +129,7 @@ func TestEncryptDecryptMyself(t *testing.T) {
 }
 
 func TestSignVerify(t *testing.T) {
-	henk, err := NewRsaIdentity()
-
-	if err != nil {
-		t.Errorf("Unable to create identity for Henk; %s", err)
-	}
+	henk, _ := NewRsaIdentity()
 
 	// A public message from Hans.
 	// note that the message is a byte array, not just a string.
