@@ -19,30 +19,67 @@ func TestNewRsaIdentity(t *testing.T) {
 	}
 }
 
-func TestSignature(t *testing.T) {
-	henk, err := NewRsaIdentity()
+func TestEncrypt(t *testing.T) {
+	henk, _ := NewRsaIdentity()
+	jaap, _ := NewRsaIdentity()
+	ingrid, _ := NewRsaIdentity()
 
+	msg := []byte("Arme mensen kunnen niet met geld omgaan: ze geven alles uit aan eten en kleren, " +
+		"terwijl rijke mensen het heel verstandig op de bank zetten.")
+
+	// Lets encrypt it using Ingrid's public key.
+	henksMessage, err := henk.Encrypt(msg, ingrid.public)
 	if err != nil {
-		t.Errorf("Unable to create identity for Henk; %s", err)
+		t.Errorf("Unable to encrypt Henk's message for Ingrid; %s", err)
 	}
 
-	// A message from Henk to Ingrid,
-	// note that the message is a byte array, not just a string.
-	msg := []byte("Is dit kunst of kan het weg?")
-	// Henk signs the message with his private key. This will show the recipient
-	// proof that this message is indeed from Henk
-	sig, hash, err := henk.Sign(msg)
-
+	jaapsMessage, err := jaap.Encrypt(msg, ingrid.public)
 	if err != nil {
-		t.Errorf("Unable to sign the message; %s", err)
+		t.Errorf("Unable to encrypt Jaap's message for Ingrid; %s", err)
 	}
 
-	// check if the signature is from Henk, proving that the message is indeed sent by Henk.
-	err = henk.VerifySignature(sig, hash, henk.public)
+	// Decrypt
+	hm, _ := ingrid.Decrypt(henksMessage)
+	jm, _ := ingrid.Decrypt(jaapsMessage)
 
-	if err != nil {
-		t.Errorf("Signature is not from Henk...; %s", err)
+	// Compare the messages of Henk and Jaap, and the original
+	if !bytes.Equal(hm[:], jm[:]) && !bytes.Equal(hm[:], msg) {
+		t.Error("Comparing Henk and Jaaps message; byte arrays are not the same")
 	}
+}
+
+func TestEncryptionNeverTheSame(t *testing.T) {
+	// Even when using the same public key, the encrypted messages are never the same
+	henk, _ := NewRsaIdentity()
+	jaap, _ := NewRsaIdentity()
+	joop, _ := NewRsaIdentity()
+	koos, _ := NewRsaIdentity()
+	kees, _ := NewRsaIdentity()
+	erik, _ := NewRsaIdentity()
+
+	identities := []*RsaIdentity{henk, jaap, joop, koos, kees, erik}
+
+	ingrid, err := NewRsaIdentity()
+	if err != nil {
+		t.Errorf("Unable to create identity for Ingrid; %s", err)
+	}
+
+	msg := []byte("Aan ons land geen polonaise.")
+	var msgs [][]byte
+
+	for _, id := range identities {
+		// encrypt the message using Ingrid her public key
+		e, _ := id.Encrypt(msg, ingrid.public)
+		msgs = append(msgs, e)
+	}
+
+	s := []byte("start")
+	for _, m := range msgs {
+		if bytes.Equal(m[:], s[:]) {
+			t.Error("Unable to decrypt Henk's message for Ingrid; byte arrays are not the same")
+		}
+	}
+
 }
 
 func TestEncryptDecrypt(t *testing.T) {
@@ -70,18 +107,18 @@ func TestEncryptDecrypt(t *testing.T) {
 	// Decrypt Message
 	plainTextMessage, err := ingrid.Decrypt(encryptedMessage)
 
-	if  err != nil {
+	if err != nil {
 		t.Errorf("Unable to decrypt Henk's message for Ingrid; %s", err)
 	}
 
-	if  !bytes.Equal(plainTextMessage[:], msg[:]) {
+	if !bytes.Equal(plainTextMessage[:], msg[:]) {
 		t.Error("Unable to decrypt Henk's message for Ingrid; byte arrays are not the same")
 	}
 }
 
 func TestEncryptDecryptMyself(t *testing.T) {
-	// If anyone, even you, encrypts (i.e. “locks”) something with your public-key,
-	// only you can decrypt it (i.e. “unlock” it) with your secret, private key.
+	// If anyone, even you, encrypts (id.e. “locks”) something with your public-key,
+	// only you can decrypt it (id.e. “unlock” it) with your secret, private key.
 	henk, err := NewRsaIdentity()
 
 	if err != nil {
@@ -109,10 +146,51 @@ func TestEncryptDecryptMyself(t *testing.T) {
 	}
 }
 
-func TestMyMessage(t *testing.T) {
-	// If you encrypt (i.e. “lock”) something with your private key, anyone can decrypt it (i.e. “unlock” it),
-	// but this serves as a proof that you encrypted it: it’s “digitally signed” by you.
+func TestSignVerify(t *testing.T) {
+	henk, err := NewRsaIdentity()
 
-	// todo
+	if err != nil {
+		t.Errorf("Unable to create identity for Henk; %s", err)
+	}
+
+	// A public message from Hans.
+	// note that the message is a byte array, not just a string.
+	msg := []byte("Wilders doet tenminste iets tegen de politiek.")
+	// Henk signs the message with his private key. This will show the recipient
+	// proof that this message is indeed from Henk
+	sig, err := henk.Sign(msg)
+
+	// now, if the message msg is public, anyone can read it.
+	// the signature sig however, proves this message is from Henk.
+	ingrid, _ := NewRsaIdentity()
+	hans, _ := NewRsaIdentity()
+
+	err = ingrid.Verify(msg, sig, henk.public)
+	if err != nil {
+		t.Errorf("Unable to verify Henk's signature; %s", err)
+	}
+
+	err = hans.Verify(msg, sig, henk.public)
+	if err != nil {
+		t.Errorf("Unable to verify Henk's signature; %s", err)
+	}
+
+	// Let's see if we can break the signature verification
+	// (1) changing the message
+	err = hans.Verify([]byte("Wilders is een opruier"), sig, henk.public)
+	if err == nil {
+		t.Error("Expected an error as we changed the message")
+	}
+
+	// (2) changing the signature
+	err = hans.Verify(msg, []byte("I am not the signature"), henk.public)
+	if err == nil {
+		t.Error("Expected an error as we changed the signature")
+	}
+
+	// (3) changing the public key
+	err = hans.Verify(msg, sig, ingrid.public)
+	if err == nil {
+		t.Error("Expected an error as we changed the public key")
+	}
 }
-
