@@ -30,15 +30,14 @@ func NewRsaIdentity() (*RsaIdentity, error) {
 // Sign returns a signature made by combining the message and the signers private key
 // With the r.Verify function, the signature can be checked.
 func (r *RsaIdentity) Sign(msg []byte) ([]byte, error) {
-	return rsa.SignPKCS1v15(rand.Reader, r.private, crypto.SHA256, r.getHashSum(msg))
+	hs := r.getHashSum(msg)
+	return rsa.SignPKCS1v15(rand.Reader, r.private, crypto.SHA256, hs)
 }
 
 // Verify checks if a message is signed by a given Public Key
 func (r *RsaIdentity) Verify(msg []byte, sig []byte, pk *rsa.PublicKey) error {
-	h := sha256.New()
-	h.Write(msg)
-	d := h.Sum(nil)
-	return rsa.VerifyPKCS1v15(pk, crypto.SHA256, d, sig)
+	hs := r.getHashSum(msg)
+	return rsa.VerifyPKCS1v15(pk, crypto.SHA256, hs, sig)
 }
 
 // Encrypt's the message using EncryptOAEP which encrypts the given message with RSA-OAEP.

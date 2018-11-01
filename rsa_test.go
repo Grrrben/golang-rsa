@@ -13,7 +13,8 @@ func TestNewRsaIdentity(t *testing.T) {
 
 	pkSize := henk.public.Size()
 	if pkSize != 256 {
-		t.Errorf("Unexpected pubic key size for Henk; expected %d got %d", 256, pkSize)
+		t.Errorf("Unexpected pubic key size for Henk; expected %d got %d. (Are you running an old Go version?)",
+			256, pkSize)
 	}
 }
 
@@ -42,7 +43,7 @@ func TestEncrypt(t *testing.T) {
 
 	// Compare the messages of Henk and Jaap, and the original
 	if !bytes.Equal(hm[:], jm[:]) && !bytes.Equal(hm[:], msg) {
-		t.Error("Comparing Henk and Jaaps message; byte arrays are not the same")
+		t.Error("Comparing Henk and Jaap's message; byte arrays are not the same")
 	}
 }
 
@@ -55,7 +56,9 @@ func TestEncryptionNeverTheSame(t *testing.T) {
 	kees, _ := NewRsaIdentity()
 	erik, _ := NewRsaIdentity()
 
-	identities := []*RsaIdentity{henk, jaap, joop, koos, kees, erik}
+	// Added a couple of the same Identities at the end, just to prove that the
+	// encrypted outcome differs each time.
+	identities := []*RsaIdentity{henk, jaap, joop, koos, kees, erik, erik, erik, erik}
 
 	ingrid, _ := NewRsaIdentity()
 
@@ -83,7 +86,7 @@ func TestEncryptDecrypt(t *testing.T) {
 
 	// a message from Henk to Ingrid
 	msg := []byte("Die uitkeringstrekkers pikken al onze banen in.")
-	// Lets encrypt it, we want to sent it to Ingrid, thus, we need her public key.
+	// Lets encrypt it, we want to sent it to Ingrid, thus, we use her public key.
 	encryptedMessage, err := henk.Encrypt(msg, ingrid.public)
 
 	if err != nil {
@@ -131,19 +134,19 @@ func TestEncryptDecryptMyself(t *testing.T) {
 func TestSignVerify(t *testing.T) {
 	henk, _ := NewRsaIdentity()
 
-	// A public message from Hans.
+	// A public message from Henk.
 	// note that the message is a byte array, not just a string.
 	msg := []byte("Wilders doet tenminste iets tegen de politiek.")
 	// Henk signs the message with his private key. This will show the recipient
 	// proof that this message is indeed from Henk
-	sig, err := henk.Sign(msg)
+	sig, _ := henk.Sign(msg)
 
 	// now, if the message msg is public, anyone can read it.
 	// the signature sig however, proves this message is from Henk.
 	ingrid, _ := NewRsaIdentity()
 	hans, _ := NewRsaIdentity()
 
-	err = ingrid.Verify(msg, sig, henk.public)
+	err := ingrid.Verify(msg, sig, henk.public)
 	if err != nil {
 		t.Errorf("Unable to verify Henk's signature; %s", err)
 	}
